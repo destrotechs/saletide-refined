@@ -397,13 +397,20 @@
       command: pm2 save
       become_user: "{{ app_user }}"
 
+    - name: Remove existing PM2 startup configuration
+      shell: pm2 unstartup systemd
+      become_user: "{{ app_user }}"
+      ignore_errors: yes
+
     - name: Setup PM2 startup script
       command: pm2 startup systemd -u {{ app_user }} --hp {{ app_dir }}
       register: pm2_startup_output
 
     - name: Execute PM2 startup command
-      shell: "{{ pm2_startup_output.stdout_lines[-1] }}"
-      when: pm2_startup_output.stdout_lines | length > 0
+      shell: "{{ pm2_startup_output.stdout_lines[-1] | regex_replace('^\\$\\s*', '') }}"
+      when:
+        - pm2_startup_output.stdout_lines | length > 0
+        - pm2_startup_output.stdout_lines[-1] is search('sudo')
 
     # ==========================================
     # NGINX CONFIGURATION - PHASE 1 (HTTP Only)

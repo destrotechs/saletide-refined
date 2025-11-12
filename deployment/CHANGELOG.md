@@ -4,6 +4,23 @@ This document tracks changes made to the deployment configuration to fix issues 
 
 ## Version 2.0 - 2025-11-12
 
+### Fixed: PM2 Startup Command Execution Error
+
+**Problem**: PM2 startup script execution failed with `/bin/sh: 1: $: not found`. The PM2 startup command output includes a literal `$` character (shell prompt) at the beginning, which the shell tries to execute as a command. Additionally, when PM2 already has a startup configuration, it shows `pm2 unstartup` instead of the startup command.
+
+**Solution**: Updated PM2 startup tasks to:
+1. Remove any existing PM2 startup configuration before setting up new one
+2. Strip the leading `$ ` from the command using regex before execution
+3. Only execute if the command contains 'sudo' (validates it's a legitimate startup command)
+
+**Changes**:
+- `deploy.yml:400-403`: Added task to remove existing PM2 startup configuration with `ignore_errors: yes`
+- `deploy.yml:409-413`: Updated command execution with regex to strip `$ ` prefix and added validation
+
+**Impact**: PM2 startup script now configures correctly, enabling automatic PM2 restart on server reboot.
+
+---
+
 ### Changed: Re-enabled Automated Frontend Build
 
 **Reason**: Frontend build issues have been resolved with TypeScript fixes and Next.js configuration updates. Automated builds are now reliable and production-ready.
@@ -26,6 +43,8 @@ This document tracks changes made to the deployment configuration to fix issues 
 - Added Suspense boundaries for useSearchParams hooks
 - Configured next.config.ts for production builds
 - Production build tested successfully (29 pages, 38 routes)
+- Added .gitignore exception for timax-frontend/src/lib/ directory
+- Committed previously ignored api.ts and utils.ts files
 
 **Impact**:
 - ✅ Fully automated deployment from git clone to running application
