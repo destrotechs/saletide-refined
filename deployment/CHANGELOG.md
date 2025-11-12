@@ -2,6 +2,44 @@
 
 This document tracks changes made to the deployment configuration to fix issues and improve the deployment process.
 
+## Version 1.9 - 2025-11-12
+
+### Changed: Frontend Build Process to Manual
+
+**Reason**: To allow separate troubleshooting and control over the frontend build process, preventing deployment failures due to frontend build issues.
+
+**Solution**: Commented out automated npm install and Next.js build steps in the deployment playbook. Frontend build must now be handled manually on the server.
+
+**Changes**:
+- `deploy.yml:351-386`: Commented out frontend build tasks:
+  - Check frontend package.json exists
+  - Install frontend dependencies (npm install)
+  - Build Next.js application (npm run build)
+  - Display build results
+- `README.md`: Added new section "1. Build Frontend (Manual Step Required)" with SSH instructions
+- `README.md`: Updated deployment steps list to indicate frontend build is skipped
+- `README.md`: Renumbered post-deployment steps (DNS is now step 2, SSL is now step 3, Email is now step 4)
+- `README.md`: Removed hardcoded sensitive information (domain, email, password)
+
+**Manual Build Instructions**:
+```bash
+ssh root@YOUR_SERVER_IP
+su - saletide
+cd /var/www/saletide/frontend
+npm install
+npm run build
+exit
+su - saletide -c "pm2 restart saletide-frontend"
+```
+
+**Impact**:
+- Deployment no longer fails due to frontend build errors
+- Users have full control over Node.js version and build environment
+- Frontend can be rebuilt independently without re-running full deployment
+- Backend deployment completes successfully even if frontend needs troubleshooting
+
+---
+
 ## Version 1.8 - 2025-11-12
 
 ### Fixed: Celery Service Startup Timeout

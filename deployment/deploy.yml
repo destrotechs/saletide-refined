@@ -348,41 +348,42 @@
         group: "{{ app_group }}"
         mode: '0644'
 
-    - name: Check frontend package.json exists
-      stat:
-        path: "{{ frontend_dir }}/package.json"
-      register: package_json_check
+    # Frontend build steps are skipped - handle npm install and build manually
+    # - name: Check frontend package.json exists
+    #   stat:
+    #     path: "{{ frontend_dir }}/package.json"
+    #   register: package_json_check
 
-    - name: Display package.json status
-      debug:
-        msg: "package.json exists: {{ package_json_check.stat.exists }}"
+    # - name: Display package.json status
+    #   debug:
+    #     msg: "package.json exists: {{ package_json_check.stat.exists }}"
 
-    - name: Install frontend dependencies
-      shell: npm install --verbose
-      args:
-        chdir: "{{ frontend_dir }}"
-      become_user: "{{ app_user }}"
-      register: npm_install_result
+    # - name: Install frontend dependencies
+    #   shell: npm install --verbose
+    #   args:
+    #     chdir: "{{ frontend_dir }}"
+    #   become_user: "{{ app_user }}"
+    #   register: npm_install_result
 
-    - name: Display npm install result
-      debug:
-        var: npm_install_result.stdout_lines
+    # - name: Display npm install result
+    #   debug:
+    #     var: npm_install_result.stdout_lines
 
-    - name: Build Next.js application
-      shell: npm run build
-      args:
-        chdir: "{{ frontend_dir }}"
-        executable: /bin/bash
-      become_user: "{{ app_user }}"
-      environment:
-        NEXT_PUBLIC_API_URL: "{{ frontend_api_url }}"
-        NODE_ENV: production
-      register: build_result
+    # - name: Build Next.js application
+    #   shell: npm run build
+    #   args:
+    #     chdir: "{{ frontend_dir }}"
+    #     executable: /bin/bash
+    #   become_user: "{{ app_user }}"
+    #   environment:
+    #     NEXT_PUBLIC_API_URL: "{{ frontend_api_url }}"
+    #     NODE_ENV: production
+    #   register: build_result
 
-    - name: Display build result
-      debug:
-        var: build_result.stdout_lines
-      when: build_result.rc == 0
+    # - name: Display build result
+    #   debug:
+    #     var: build_result.stdout_lines
+    #   when: build_result.rc == 0
 
     - name: Create PM2 ecosystem config
       template:

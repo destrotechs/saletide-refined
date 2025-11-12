@@ -191,15 +191,51 @@ The deployment will:
 14. ✅ Collect static files
 15. ✅ Load initial data (chart of accounts, services)
 16. ✅ Setup and start systemd services (Django + Celery)
-17. ✅ Deploy and build frontend
-18. ✅ Start frontend with PM2
-19. ✅ Configure Nginx (HTTP first, then HTTPS)
-20. ✅ Generate Let's Encrypt SSL certificate automatically
-21. ✅ Setup automatic SSL certificate renewal
+17. ✅ Copy frontend files and create .env.local
+18. ⚠️ **Frontend npm install and build skipped** (handle manually)
+19. ✅ Configure PM2 for frontend
+20. ✅ Configure Nginx (HTTP first, then HTTPS)
+21. ✅ Generate Let's Encrypt SSL certificate automatically
+22. ✅ Setup automatic SSL certificate renewal
 
 ## Post-Deployment Steps
 
-### 1. Configure DNS
+### 1. Build Frontend (Manual Step Required)
+
+**⚠️ IMPORTANT**: The deployment skips npm install and build for the frontend. You must manually build the frontend on the server.
+
+SSH into your server and run:
+```bash
+# SSH to server
+ssh root@YOUR_SERVER_IP
+
+# Switch to application user
+su - saletide
+
+# Navigate to frontend directory
+cd /var/www/saletide/frontend
+
+# Install dependencies
+npm install
+
+# Build Next.js application
+npm run build
+
+# Exit back to root
+exit
+
+# Restart PM2 as application user
+su - saletide -c "pm2 restart saletide-frontend"
+```
+
+**Why manual build?**
+- Allows you to troubleshoot build issues separately
+- Gives you control over Node.js version and build environment
+- Prevents deployment from failing due to frontend build errors
+
+Once the frontend is built, PM2 will serve the production build.
+
+### 2. Configure DNS
 
 **IMPORTANT**: Before running deployment, ensure DNS is configured:
 
@@ -218,7 +254,7 @@ nslookup saletide.destrotechs.org
 dig saletide.destrotechs.org
 ```
 
-### 2. SSL Certificate (Automatic)
+### 3. SSL Certificate (Automatic)
 
 The deployment automatically:
 - ✅ Generates Let's Encrypt SSL certificate using certbot
@@ -233,7 +269,7 @@ If SSL generation fails during deployment (usually due to DNS not propagating):
 
 To manually check/renew SSL certificate:
 ```bash
-ssh root@158.220.124.84
+ssh root@YOUR_SERVER_IP
 
 # Check certificate status
 sudo certbot certificates
@@ -246,7 +282,7 @@ sudo certbot renew --force-renewal
 sudo systemctl reload nginx
 ```
 
-### 3. Update Email Configuration
+### 4. Update Email Configuration
 
 Edit the environment file:
 ```bash
@@ -271,14 +307,15 @@ sudo systemctl restart saletide
 
 After deployment:
 
-- **Frontend**: https://saletide.destrotechs.org
-- **API**: https://saletide.destrotechs.org/api/
-- **Admin Panel**: https://saletide.destrotechs.org/admin/
+- **Frontend**: https://your-domain.com
+- **API**: https://your-domain.com/api/
+- **Admin Panel**: https://your-domain.com/admin/
 
 ### Login Credentials
 
-- **Email**: morrisdestro@gmail.com
-- **Password**: !Not123!
+Use the credentials you configured in `vars.yml`:
+- **Email**: Value from `django_superuser_email`
+- **Password**: Value from `django_superuser_password`
 
 **⚠️ Important**: Change the password immediately after first login!
 
