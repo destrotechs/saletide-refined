@@ -64,7 +64,7 @@ export default function AuditPage() {
   // Fetch audit logs
   const { data: auditLogs, isLoading: auditLoading, refetch: refetchAudit } = useQuery({
     queryKey: ['audit-logs', activeTab, searchTerm, filters],
-    queryFn: () => {
+    queryFn: async () => {
       const params = {
         search: searchTerm || undefined,
         ...Object.fromEntries(Object.entries(filters).filter(([_, value]) => value !== '')),
@@ -72,19 +72,19 @@ export default function AuditPage() {
 
       switch (activeTab) {
         case 'audit-logs':
-          return apiClient.getAuditLogs(params);
+          return await apiClient.getAuditLogs(params);
         case 'price-overrides':
-          return apiClient.getPriceOverrideLogs(params);
+          return await apiClient.getPriceOverrideLogs(params);
         case 'stock-movements':
-          return apiClient.getStockMovementLogs(params);
+          return await apiClient.getStockMovementLogs(params);
         case 'user-sessions':
-          return apiClient.getUserSessionLogs(params);
+          return await apiClient.getUserSessionLogs(params);
         default:
-          return apiClient.getAuditLogs(params);
+          return await apiClient.getAuditLogs(params);
       }
     },
     enabled: true,
-  });
+  }) as any;
 
   const formatDateTime = (dateString: string) => {
     return new Date(dateString).toLocaleString('en-US', {

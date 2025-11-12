@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
@@ -316,7 +316,7 @@ function MaterialsSelectionSection({
   );
 }
 
-export default function NewJobPage() {
+function NewJobPageContent() {
   const { user: currentUser } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -935,5 +935,12 @@ export default function NewJobPage() {
         </div>
       </Layout>
     </ProtectedRoute>
+  );
+}
+export default function NewJobPage() {
+  return (
+    <Suspense fallback={<div className="flex justify-center items-center min-h-screen"><div className="text-gray-600">Loading...</div></div>}>
+      <NewJobPageContent />
+    </Suspense>
   );
 }

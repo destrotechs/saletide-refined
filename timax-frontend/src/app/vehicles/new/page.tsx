@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
@@ -32,7 +32,7 @@ interface VehicleFormData {
   notes: string;
 }
 
-export default function NewVehiclePage() {
+function NewVehiclePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
@@ -439,5 +439,12 @@ export default function NewVehiclePage() {
         </div>
       </Layout>
     </ProtectedRoute>
+  );
+}
+export default function NewVehiclePage() {
+  return (
+    <Suspense fallback={<div className="flex justify-center items-center min-h-screen"><div className="text-gray-600">Loading...</div></div>}>
+      <NewVehiclePageContent />
+    </Suspense>
   );
 }

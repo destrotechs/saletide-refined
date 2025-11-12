@@ -46,7 +46,7 @@ const ServiceVariantModal: React.FC<ServiceVariantModalProps> = ({ isOpen, onClo
   // Fetch service variants
   const { data: variantsData, isLoading: variantsLoading } = useQuery({
     queryKey: ['service-variants', service?.id],
-    queryFn: () => service ? apiClient.getServiceVariants({ service: service.id }) : Promise.resolve({ results: [] }),
+    queryFn: () => service ? apiClient.getServiceVariants({ service: service.id }) : Promise.resolve({ results: [], count: 0, next: null, previous: null }),
     enabled: !!service && isOpen,
   });
 
@@ -200,7 +200,7 @@ const ServiceVariantModal: React.FC<ServiceVariantModalProps> = ({ isOpen, onClo
     }
   };
 
-  const filteredVariants = variants.filter(variant =>
+  const filteredVariants = variants.filter((variant: ServiceVariant) =>
     variant.part_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     variant.vehicle_class_name.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -294,7 +294,7 @@ const ServiceVariantModal: React.FC<ServiceVariantModalProps> = ({ isOpen, onClo
                   </div>
                 ) : (
                   <div className="divide-y divide-gray-200">
-                    {filteredVariants.map((variant) => (
+                    {filteredVariants.map((variant: ServiceVariant) => (
                       <div key={variant.id} className="p-4 hover:bg-gray-50">
                         <div className="flex items-center justify-between">
                           <div className="flex-1 min-w-0">
@@ -364,7 +364,7 @@ const ServiceVariantModal: React.FC<ServiceVariantModalProps> = ({ isOpen, onClo
                       </label>
                       <Combobox
                         value={formData.part}
-                        onChange={(value) => setFormData(prev => ({ ...prev, part: value }))}
+                        onChange={(value) => setFormData(prev => ({ ...prev, part: value || '' }))}
                       >
                         <div className="relative">
                           <Combobox.Input
@@ -422,7 +422,7 @@ const ServiceVariantModal: React.FC<ServiceVariantModalProps> = ({ isOpen, onClo
                       </label>
                       <Combobox
                         value={formData.vehicle_class}
-                        onChange={(value) => setFormData(prev => ({ ...prev, vehicle_class: value }))}
+                        onChange={(value) => setFormData(prev => ({ ...prev, vehicle_class: value || '' }))}
                       >
                         <div className="relative">
                           <Combobox.Input

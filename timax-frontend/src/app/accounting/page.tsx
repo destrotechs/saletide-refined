@@ -202,7 +202,7 @@ function ProfitLossSection() {
 
   const { data: plStatement, isLoading, error } = useQuery({
     queryKey: ['profitLoss', startDate, endDate],
-    queryFn: () => apiClient.getProfitLossStatement(startDate, endDate),
+    queryFn: () => apiClient.getProfitLossStatement({ start_date: startDate, end_date: endDate }),
   });
 
   return (
@@ -510,7 +510,7 @@ function FinancialReportsSection() {
 
   const { data: currentPL, isLoading: plLoading } = useQuery({
     queryKey: ['profitLoss', '2025-01-01', '2025-12-31'],
-    queryFn: () => apiClient.getProfitLossStatement('2025-01-01', '2025-12-31'),
+    queryFn: () => apiClient.getProfitLossStatement({ start_date: '2025-01-01', end_date: '2025-12-31' }),
   });
 
   const reports = [
