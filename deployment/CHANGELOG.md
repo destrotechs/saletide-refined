@@ -11,10 +11,12 @@ This document tracks changes made to the deployment configuration to fix issues 
 **Solution**: Re-enabled automated npm install and Next.js build steps in the deployment playbook. Build configuration ensures successful compilation.
 
 **Changes**:
-- `deploy.yml:351-367`: Re-enabled frontend build tasks (uncommented and simplified):
-  - Install frontend dependencies (npm install) - removed --verbose flag for cleaner output
+- `deploy.yml:351-357`: Added ownership fix before npm install
+  - Ensure frontend directory has correct ownership (recurse: yes)
+  - Fixes EACCES permission denied errors during npm install
+- `deploy.yml:359-374`: Re-enabled frontend build tasks:
+  - Install frontend dependencies (npm install)
   - Build Next.js application (npm run build)
-  - Removed diagnostic tasks (package.json check, debug output) - no longer needed
 - `deploy.yml:162`: node_modules already excluded from rsync (existing configuration)
 - Frontend TypeScript errors fixed in application code
 - Next.js configuration updated with build flags (ignoreBuildErrors, ignoreDuringBuilds)

@@ -348,6 +348,14 @@
         group: "{{ app_group }}"
         mode: '0644'
 
+    - name: Ensure frontend directory has correct ownership
+      file:
+        path: "{{ frontend_dir }}"
+        owner: "{{ app_user }}"
+        group: "{{ app_group }}"
+        recurse: yes
+        state: directory
+
     - name: Install frontend dependencies
       shell: npm install
       args:
