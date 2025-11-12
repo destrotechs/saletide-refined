@@ -1,0 +1,28 @@
+[Unit]
+Description=SaleTide Celery Beat Scheduler
+After=network.target redis.service postgresql.service
+Wants=redis.service
+
+[Service]
+Type=simple
+User={{ app_user }}
+Group={{ app_group }}
+WorkingDirectory={{ backend_dir }}
+Environment="PATH={{ venv_dir }}/bin"
+EnvironmentFile={{ backend_dir }}/.env
+
+ExecStart={{ venv_dir }}/bin/celery -A timax_backend beat \
+    --loglevel=info \
+    --logfile=/var/log/{{ app_name }}/celery_beat.log \
+    --pidfile=/var/run/{{ app_name }}/celery_beat.pid
+
+Restart=always
+RestartSec=10
+TimeoutStartSec=180
+
+# Process management
+KillMode=mixed
+KillSignal=SIGTERM
+
+[Install]
+WantedBy=multi-user.target

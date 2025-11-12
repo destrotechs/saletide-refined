@@ -1,0 +1,27 @@
+[Unit]
+Description=SaleTide Django Application
+After=network.target postgresql.service redis.service
+Wants=postgresql.service redis.service
+
+[Service]
+Type=notify
+User={{ app_user }}
+Group={{ app_group }}
+WorkingDirectory={{ backend_dir }}
+Environment="PATH={{ venv_dir }}/bin"
+EnvironmentFile={{ backend_dir }}/.env
+
+ExecStart={{ venv_dir }}/bin/gunicorn \
+    --config {{ backend_dir }}/gunicorn_config.py \
+    {{ django_settings_module.split('.')[0] }}.wsgi:application
+
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=mixed
+TimeoutStartSec=120
+TimeoutStopSec=10
+PrivateTmp=true
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

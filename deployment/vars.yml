@@ -1,0 +1,45 @@
+---
+# Server Configuration
+server_ip: 158.220.124.84
+domain_name: saletide.destrotechs.org
+
+# Application Configuration
+app_name: saletide
+app_user: saletide
+app_group: saletide
+app_dir: /var/www/saletide
+backend_dir: "{{ app_dir }}/backend"
+frontend_dir: "{{ app_dir }}/frontend"
+
+# Python/Django Configuration
+python_version: python3
+venv_dir: "{{ backend_dir }}/venv"
+django_settings_module: timax_backend.settings
+
+# Database Configuration
+db_name: saletide_db
+db_user: saletide_user
+db_password: "SaleTide2024!Secure"
+
+# Superuser Configuration
+django_superuser_email: morrisdestro@gmail.com
+django_superuser_password: "!Not123!"
+django_superuser_first_name: Morris
+django_superuser_last_name: Destro
+
+# GitHub Repository
+repo_url: https://github.com/destrotechs/saletide-refined.git
+repo_branch: main
+
+# Gunicorn Configuration
+gunicorn_workers: 3
+gunicorn_bind: unix:/var/www/saletide/backend/saletide.sock
+
+# Frontend Configuration
+frontend_port: 3001
+frontend_api_url: https://{{ domain_name }}/api
+
+# SSL Configuration
+letsencrypt_email: morrisdestro@gmail.com
+ssl_cert_path: /etc/letsencrypt/live/{{ domain_name }}/fullchain.pem
+ssl_key_path: /etc/letsencrypt/live/{{ domain_name }}/privkey.pem

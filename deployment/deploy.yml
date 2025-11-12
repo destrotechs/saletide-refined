@@ -1,0 +1,544 @@
+---
+- name: Deploy SaleTide Application
+  hosts: saletide_server
+  become: yes
+  vars_files:
+    - vars.yml
+
+  tasks:
+    # ==========================================
+    # SYSTEM SETUP
+    # ==========================================
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install system dependencies
+      apt:
+        name:
+          - python3
+          - python3-pip
+          - python3-venv
+          - python3-dev
+          - python3-psycopg2  # For Ansible PostgreSQL modules
+          - build-essential
+          - git
+          - libpq-dev
+          - redis-server
+          - certbot
+          - python3-certbot-nginx
+          - rsync  # For copying files efficiently
+        state: present
+
+    - name: Ensure Redis is running
+      systemd:
+        name: redis-server
+        state: started
+        enabled: yes
+
+    # ==========================================
+    # APPLICATION USER
+    # ==========================================
+    - name: Create application user
+      user:
+        name: "{{ app_user }}"
+        system: yes
+        shell: /bin/bash
+        home: "{{ app_dir }}"
+        create_home: yes
+
+    # ==========================================
+    # DATABASE SETUP
+    # ==========================================
+    - name: Create PostgreSQL database
+      become_user: postgres
+      postgresql_db:
+        name: "{{ db_name }}"
+        encoding: UTF-8
+        lc_collate: en_US.UTF-8
+        lc_ctype: en_US.UTF-8
+        template: template0
+        state: present
+
+    - name: Create PostgreSQL user
+      become_user: postgres
+      postgresql_user:
+        name: "{{ db_user }}"
+        password: "{{ db_password }}"
+        encrypted: yes
+        state: present
+
+    - name: Grant privileges to database user
+      become_user: postgres
+      postgresql_privs:
+        database: "{{ db_name }}"
+        role: "{{ db_user }}"
+        privs: ALL
+        type: database
+
+    - name: Grant schema privileges to database user
+      become_user: postgres
+      postgresql_privs:
+        database: "{{ db_name }}"
+        role: "{{ db_user }}"
+        type: schema
+        objs: public
+        privs: CREATE,USAGE
+
+    - name: Grant privileges on all tables in schema public
+      become_user: postgres
+      postgresql_privs:
+        database: "{{ db_name }}"
+        role: "{{ db_user }}"
+        privs: ALL
+        type: table
+        objs: ALL_IN_SCHEMA
+        schema: public
+
+    - name: Grant privileges on all sequences in schema public
+      become_user: postgres
+      postgresql_privs:
+        database: "{{ db_name }}"
+        role: "{{ db_user }}"
+        privs: ALL
+        type: sequence
+        objs: ALL_IN_SCHEMA
+        schema: public
+
+    - name: Set default privileges for future tables
+      become_user: postgres
+      postgresql_query:
+        db: "{{ db_name }}"
+        query: ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO {{ db_user }};
+
+    - name: Set default privileges for future sequences
+      become_user: postgres
+      postgresql_query:
+        db: "{{ db_name }}"
+        query: ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO {{ db_user }};
+
+    # ==========================================
+    # BACKEND DEPLOYMENT
+    # ==========================================
+    - name: Create application directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ app_user }}"
+        group: "{{ app_group }}"
+        mode: '0755'
+      loop:
+        - "{{ app_dir }}"
+        - "{{ backend_dir }}"
+        - "{{ backend_dir }}/logs"
+        - "{{ backend_dir }}/media"
+        - "{{ backend_dir }}/staticfiles"
+        - "{{ frontend_dir }}"
+        - "/var/log/{{ app_name }}"
+        - "/var/run/{{ app_name }}"
+
+    - name: Clone repository
+      git:
+        repo: "{{ repo_url }}"
+        dest: "{{ app_dir }}/repo"
+        version: "{{ repo_branch }}"
+        force: yes
+      become_user: "{{ app_user }}"
+
+    - name: Copy backend files to backend directory
+      shell: |
+        rsync -av \
+          --exclude='timax-frontend' \
+          --exclude='.git' \
+          --exclude='__pycache__' \
+          --exclude='*.pyc' \
+          {{ app_dir }}/repo/ {{ backend_dir }}/
+      become_user: "{{ app_user }}"
+
+    - name: Copy frontend files to frontend directory
+      shell: |
+        rsync -av \
+          --exclude='node_modules' \
+          --exclude='.next' \
+          --exclude='.git' \
+          {{ app_dir }}/repo/timax-frontend/ {{ frontend_dir }}/
+      become_user: "{{ app_user }}"
+
+    - name: Create Python virtual environment
+      command: python3 -m venv {{ venv_dir }}
+      args:
+        creates: "{{ venv_dir }}/bin/activate"
+      become_user: "{{ app_user }}"
+
+    - name: Upgrade pip in virtual environment
+      pip:
+        name: pip
+        state: latest
+        virtualenv: "{{ venv_dir }}"
+      become_user: "{{ app_user }}"
+
+    - name: Install psycopg2-binary in virtual environment
+      pip:
+        name: psycopg2-binary
+        virtualenv: "{{ venv_dir }}"
+      become_user: "{{ app_user }}"
+
+    - name: Install gunicorn in virtual environment
+      pip:
+        name: gunicorn
+        virtualenv: "{{ venv_dir }}"
+      become_user: "{{ app_user }}"
+
+    - name: Install Python dependencies
+      pip:
+        requirements: "{{ backend_dir }}/requirements.txt"
+        virtualenv: "{{ venv_dir }}"
+      become_user: "{{ app_user }}"
+
+    - name: Create production environment file
+      template:
+        src: templates/.env.production.j2
+        dest: "{{ backend_dir }}/.env"
+        owner: "{{ app_user }}"
+        group: "{{ app_group }}"
+        mode: '0600'
+
+    - name: Create gunicorn config file
+      template:
+        src: templates/gunicorn_config.py.j2
+        dest: "{{ backend_dir }}/gunicorn_config.py"
+        owner: "{{ app_user }}"
+        group: "{{ app_group }}"
+        mode: '0644'
+
+    - name: Run Django migrations
+      shell: |
+        cd {{ backend_dir }}
+        source {{ venv_dir }}/bin/activate
+        set -a
+        source .env
+        set +a
+        python manage.py migrate --noinput
+      args:
+        executable: /bin/bash
+      become_user: "{{ app_user }}"
+
+    - name: Collect static files
+      shell: |
+        cd {{ backend_dir }}
+        source {{ venv_dir }}/bin/activate
+        set -a
+        source .env
+        set +a
+        python manage.py collectstatic --noinput
+      args:
+        executable: /bin/bash
+      become_user: "{{ app_user }}"
+
+    - name: Setup chart of accounts
+      shell: |
+        cd {{ backend_dir }}
+        source {{ venv_dir }}/bin/activate
+        set -a
+        source .env
+        set +a
+        python manage.py setup_chart_of_accounts
+      args:
+        executable: /bin/bash
+      become_user: "{{ app_user }}"
+      ignore_errors: yes
+
+    - name: Setup asset categories
+      shell: |
+        cd {{ backend_dir }}
+        source {{ venv_dir }}/bin/activate
+        set -a
+        source .env
+        set +a
+        python manage.py setup_asset_categories
+      args:
+        executable: /bin/bash
+      become_user: "{{ app_user }}"
+      ignore_errors: yes
+
+    - name: Populate services
+      shell: |
+        cd {{ backend_dir }}
+        source {{ venv_dir }}/bin/activate
+        set -a
+        source .env
+        set +a
+        python manage.py populate_services
+      args:
+        executable: /bin/bash
+      become_user: "{{ app_user }}"
+      ignore_errors: yes
+
+    - name: Create Django superuser
+      shell: |
+        cd {{ backend_dir }}
+        source {{ venv_dir }}/bin/activate
+        set -a
+        source .env
+        set +a
+        echo "from django.contrib.auth import get_user_model; \
+        User = get_user_model(); \
+        User.objects.filter(email='{{ django_superuser_email }}').exists() or \
+        User.objects.create_superuser('{{ django_superuser_email }}', '{{ django_superuser_email }}', '{{ django_superuser_password }}', first_name='{{ django_superuser_first_name }}', last_name='{{ django_superuser_last_name }}')" | python manage.py shell
+      args:
+        executable: /bin/bash
+      become_user: "{{ app_user }}"
+      ignore_errors: yes
+
+    # ==========================================
+    # SYSTEMD SERVICES
+    # ==========================================
+    - name: Create systemd service for Django
+      template:
+        src: templates/saletide.service.j2
+        dest: /etc/systemd/system/saletide.service
+        mode: '0644'
+
+    - name: Create systemd service for Celery worker
+      template:
+        src: templates/saletide-celery.service.j2
+        dest: /etc/systemd/system/saletide-celery.service
+        mode: '0644'
+
+    - name: Create systemd service for Celery beat
+      template:
+        src: templates/saletide-celery-beat.service.j2
+        dest: /etc/systemd/system/saletide-celery-beat.service
+        mode: '0644'
+
+    - name: Reload systemd daemon
+      systemd:
+        daemon_reload: yes
+
+    - name: Enable and start Django service
+      systemd:
+        name: saletide
+        enabled: yes
+        state: restarted
+
+    - name: Enable and start Celery worker
+      systemd:
+        name: saletide-celery
+        enabled: yes
+        state: restarted
+
+    - name: Enable and start Celery beat
+      systemd:
+        name: saletide-celery-beat
+        enabled: yes
+        state: restarted
+
+    # ==========================================
+    # FRONTEND DEPLOYMENT
+    # ==========================================
+    - name: Create frontend .env.local file
+      copy:
+        content: |
+          NEXT_PUBLIC_API_URL={{ frontend_api_url }}
+          NEXT_PUBLIC_COMPANY_NAME=SaleTide
+          NEXT_PUBLIC_COMPANY_TAGLINE=Professional Automotive Services
+        dest: "{{ frontend_dir }}/.env.local"
+        owner: "{{ app_user }}"
+        group: "{{ app_group }}"
+        mode: '0644'
+
+    - name: Check frontend package.json exists
+      stat:
+        path: "{{ frontend_dir }}/package.json"
+      register: package_json_check
+
+    - name: Display package.json status
+      debug:
+        msg: "package.json exists: {{ package_json_check.stat.exists }}"
+
+    - name: Install frontend dependencies
+      shell: npm install --verbose
+      args:
+        chdir: "{{ frontend_dir }}"
+      become_user: "{{ app_user }}"
+      register: npm_install_result
+
+    - name: Display npm install result
+      debug:
+        var: npm_install_result.stdout_lines
+
+    - name: Build Next.js application
+      shell: npm run build
+      args:
+        chdir: "{{ frontend_dir }}"
+        executable: /bin/bash
+      become_user: "{{ app_user }}"
+      environment:
+        NEXT_PUBLIC_API_URL: "{{ frontend_api_url }}"
+        NODE_ENV: production
+      register: build_result
+
+    - name: Display build result
+      debug:
+        var: build_result.stdout_lines
+      when: build_result.rc == 0
+
+    - name: Create PM2 ecosystem config
+      template:
+        src: templates/ecosystem.config.js.j2
+        dest: "{{ frontend_dir }}/ecosystem.config.js"
+        owner: "{{ app_user }}"
+        group: "{{ app_group }}"
+        mode: '0644'
+
+    - name: Stop existing PM2 app if running
+      command: pm2 delete saletide-frontend
+      become_user: "{{ app_user }}"
+      ignore_errors: yes
+
+    - name: Start frontend with PM2
+      command: pm2 start {{ frontend_dir }}/ecosystem.config.js
+      args:
+        chdir: "{{ frontend_dir }}"
+      become_user: "{{ app_user }}"
+
+    - name: Save PM2 configuration
+      command: pm2 save
+      become_user: "{{ app_user }}"
+
+    - name: Setup PM2 startup script
+      command: pm2 startup systemd -u {{ app_user }} --hp {{ app_dir }}
+      register: pm2_startup_output
+
+    - name: Execute PM2 startup command
+      shell: "{{ pm2_startup_output.stdout_lines[-1] }}"
+      when: pm2_startup_output.stdout_lines | length > 0
+
+    # ==========================================
+    # NGINX CONFIGURATION - PHASE 1 (HTTP Only)
+    # ==========================================
+    - name: Create certbot directory for ACME challenge
+      file:
+        path: /var/www/certbot
+        state: directory
+        mode: '0755'
+
+    - name: Create initial HTTP-only Nginx configuration
+      template:
+        src: templates/nginx_saletide_http.conf.j2
+        dest: /etc/nginx/sites-available/saletide
+        mode: '0644'
+
+    - name: Enable Nginx site
+      file:
+        src: /etc/nginx/sites-available/saletide
+        dest: /etc/nginx/sites-enabled/saletide
+        state: link
+
+    - name: Test Nginx configuration
+      command: nginx -t
+      register: nginx_test
+      changed_when: false
+
+    - name: Reload Nginx
+      systemd:
+        name: nginx
+        state: reloaded
+      when: nginx_test.rc == 0
+
+    # ==========================================
+    # SSL CERTIFICATE GENERATION
+    # ==========================================
+    - name: Check if SSL certificate already exists
+      stat:
+        path: "{{ ssl_cert_path }}"
+      register: ssl_cert_check
+
+    - name: Obtain Let's Encrypt SSL certificate
+      command: >
+        certbot certonly --webroot
+        -w /var/www/certbot
+        -d {{ domain_name }}
+        --non-interactive
+        --agree-tos
+        --email {{ letsencrypt_email }}
+        --deploy-hook "systemctl reload nginx"
+      when: not ssl_cert_check.stat.exists
+      register: certbot_result
+
+    - name: Display certbot result
+      debug:
+        msg: "{{ certbot_result.stdout_lines }}"
+      when: certbot_result is defined and certbot_result.stdout_lines is defined
+
+    # ==========================================
+    # NGINX CONFIGURATION - PHASE 2 (HTTPS)
+    # ==========================================
+    - name: Deploy full HTTPS Nginx configuration
+      template:
+        src: templates/nginx_saletide.conf.j2
+        dest: /etc/nginx/sites-available/saletide
+        mode: '0644'
+      when: ssl_cert_check.stat.exists or (certbot_result is defined and certbot_result.rc == 0)
+
+    - name: Test final Nginx configuration
+      command: nginx -t
+      register: nginx_final_test
+      changed_when: false
+
+    - name: Reload Nginx with HTTPS configuration
+      systemd:
+        name: nginx
+        state: reloaded
+      when: nginx_final_test.rc == 0
+
+    - name: Setup certbot auto-renewal
+      cron:
+        name: "Certbot renewal"
+        minute: "0"
+        hour: "3"
+        job: "certbot renew --quiet --deploy-hook 'systemctl reload nginx'"
+        user: root
+
+    # ==========================================
+    # FINAL CHECKS
+    # ==========================================
+    - name: Check Django service status
+      systemd:
+        name: saletide
+      register: django_status
+
+    - name: Check Celery worker status
+      systemd:
+        name: saletide-celery
+      register: celery_status
+
+    - name: Check SSL certificate status
+      stat:
+        path: "{{ ssl_cert_path }}"
+      register: ssl_final_check
+
+    - name: Display deployment summary
+      debug:
+        msg:
+          - "=========================================="
+          - "SaleTide Deployment Complete!"
+          - "=========================================="
+          - "Backend API: https://{{ domain_name }}/api/"
+          - "Django Admin: https://{{ domain_name }}/admin/"
+          - "Frontend: https://{{ domain_name }}/"
+          - ""
+          - "Superuser Email: {{ django_superuser_email }}"
+          - "Superuser Password: {{ django_superuser_password }}"
+          - ""
+          - "Django Service: {{ django_status.status.ActiveState }}"
+          - "Celery Worker: {{ celery_status.status.ActiveState }}"
+          - "SSL Certificate: {{ 'Installed' if ssl_final_check.stat.exists else 'Not Installed' }}"
+          - ""
+          - "Next steps:"
+          - "1. Ensure DNS is pointing {{ domain_name }} to {{ server_ip }}"
+          - "2. {% if ssl_final_check.stat.exists %}SSL is configured and auto-renewing{% else %}Re-run deployment after DNS propagation for SSL{% endif %}"
+          - "3. Configure email settings in {{ backend_dir }}/.env"
+          - "4. Change default passwords immediately!"
+          - "=========================================="

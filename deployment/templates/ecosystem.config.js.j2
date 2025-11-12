@@ -1,0 +1,27 @@
+module.exports = {
+  apps: [
+    {
+      name: 'saletide-frontend',
+      cwd: '{{ frontend_dir }}',
+      script: 'npm',
+      args: 'start',
+      interpreter: 'none',
+      env: {
+        NODE_ENV: 'production',
+        PORT: {{ frontend_port }},
+        NEXT_PUBLIC_API_URL: '{{ frontend_api_url }}',
+        NEXT_PUBLIC_COMPANY_NAME: 'SaleTide',
+        NEXT_PUBLIC_COMPANY_TAGLINE: 'Professional Automotive Services'
+      },
+      instances: 1,
+      exec_mode: 'fork',
+      autorestart: true,
+      watch: false,
+      max_memory_restart: '1G',
+      error_file: '/var/log/{{ app_name }}/pm2_error.log',
+      out_file: '/var/log/{{ app_name }}/pm2_out.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+      merge_logs: true
+    }
+  ]
+};

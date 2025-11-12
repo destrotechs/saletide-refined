@@ -1,0 +1,35 @@
+"""Gunicorn configuration file for SaleTide"""
+
+import multiprocessing
+
+# Server Socket
+bind = '{{ gunicorn_bind }}'
+backlog = 2048
+
+# Worker Processes
+workers = {{ gunicorn_workers }}
+worker_class = 'sync'
+worker_connections = 1000
+timeout = 300
+keepalive = 2
+
+# Process Naming
+proc_name = '{{ app_name }}'
+
+# Logging
+accesslog = '/var/log/{{ app_name }}/gunicorn_access.log'
+errorlog = '/var/log/{{ app_name }}/gunicorn_error.log'
+loglevel = 'info'
+access_log_format = '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"'
+
+# Server Mechanics
+daemon = False
+pidfile = '/var/run/{{ app_name }}/gunicorn.pid'
+umask = 0o007
+user = '{{ app_user }}'
+group = '{{ app_group }}'
+tmp_upload_dir = None
+
+# SSL
+keyfile = None
+certfile = None

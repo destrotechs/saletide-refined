@@ -1,0 +1,29 @@
+[Unit]
+Description=SaleTide Celery Worker
+After=network.target redis.service postgresql.service
+Wants=redis.service
+
+[Service]
+Type=simple
+User={{ app_user }}
+Group={{ app_group }}
+WorkingDirectory={{ backend_dir }}
+Environment="PATH={{ venv_dir }}/bin"
+EnvironmentFile={{ backend_dir }}/.env
+
+ExecStart={{ venv_dir }}/bin/celery -A timax_backend worker \
+    --loglevel=info \
+    --logfile=/var/log/{{ app_name }}/celery_worker.log \
+    --pidfile=/var/run/{{ app_name }}/celery_worker.pid
+
+ExecStop=/bin/kill -s TERM $MAINPID
+Restart=always
+RestartSec=10
+TimeoutStartSec=180
+
+# Process management
+KillMode=mixed
+KillSignal=SIGTERM
+
+[Install]
+WantedBy=multi-user.target

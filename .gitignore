@@ -68,6 +68,3 @@ logs/
 .coverage
 htmlcov/
 .pytest_cache/
-
-# Deployment
-deployment/
