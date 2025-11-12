@@ -4,6 +4,33 @@ This document tracks changes made to the deployment configuration to fix issues 
 
 ## Version 2.0 - 2025-11-12
 
+### Changed: Made SSL Certificate Generation Optional
+
+**Reason**: Let's Encrypt ACME challenge can fail in some configurations, blocking deployment completion. Users may prefer alternative SSL solutions (CloudFlare, ZeroSSL, commercial certificates).
+
+**Solution**: Added `enable_ssl_generation` flag to vars.yml (defaults to false). SSL certificate generation and HTTPS configuration are now optional. Deployment completes with HTTP-only Nginx configuration, allowing manual SSL setup afterward.
+
+**Changes**:
+- `vars.yml:43`: Added `enable_ssl_generation: false` flag
+- `deploy.yml:450-477`: Made SSL certificate tasks conditional based on flag
+- `deploy.yml:482-514`: Made HTTPS Nginx configuration and certbot renewal conditional
+- `deploy.yml:540-553`: Updated deployment summary to show HTTP URLs and manual SSL instructions
+- `deployment/SSL_MANUAL.md`: Created comprehensive manual SSL setup guide with 5 options:
+  - Option 1: Manual Let's Encrypt (Certbot standalone/DNS challenge)
+  - Option 2: CloudFlare SSL (Free, recommended for production)
+  - Option 3: ZeroSSL (Free alternative to Let's Encrypt)
+  - Option 4: Self-signed certificate (Development only)
+  - Option 5: Commercial SSL certificate
+
+**Impact**:
+- ✅ Deployment completes successfully even without SSL
+- ✅ Application accessible via HTTP immediately
+- ✅ SSL can be added manually using preferred method
+- ✅ No blocking errors during automated deployment
+- ✅ Flexible SSL options for different use cases
+
+---
+
 ### Fixed: PM2 Startup Command Execution Error
 
 **Problem**: PM2 startup script execution failed with `/bin/sh: 1: $: not found`. The PM2 startup command output includes a literal `$` character (shell prompt) at the beginning, which the shell tries to execute as a command. Additionally, when PM2 already has a startup configuration, it shows `pm2 unstartup` instead of the startup command.

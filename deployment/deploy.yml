@@ -445,12 +445,13 @@
       when: nginx_test.rc == 0
 
     # ==========================================
-    # SSL CERTIFICATE GENERATION
+    # SSL CERTIFICATE GENERATION (OPTIONAL)
     # ==========================================
     - name: Check if SSL certificate already exists
       stat:
         path: "{{ ssl_cert_path }}"
       register: ssl_cert_check
+      when: enable_ssl_generation | default(false)
 
     - name: Obtain Let's Encrypt SSL certificate
       command: >
@@ -461,13 +462,19 @@
         --agree-tos
         --email {{ letsencrypt_email }}
         --deploy-hook "systemctl reload nginx"
-      when: not ssl_cert_check.stat.exists
+      when:
+        - enable_ssl_generation | default(false)
+        - not ssl_cert_check.stat.exists
       register: certbot_result
+      ignore_errors: yes
 
     - name: Display certbot result
       debug:
         msg: "{{ certbot_result.stdout_lines }}"
-      when: certbot_result is defined and certbot_result.stdout_lines is defined
+      when:
+        - enable_ssl_generation | default(false)
+        - certbot_result is defined
+        - certbot_result.stdout_lines is defined
 
     # ==========================================
     # NGINX CONFIGURATION - PHASE 2 (HTTPS)
@@ -477,18 +484,25 @@
         src: templates/nginx_saletide.conf.j2
         dest: /etc/nginx/sites-available/saletide
         mode: '0644'
-      when: ssl_cert_check.stat.exists or (certbot_result is defined and certbot_result.rc == 0)
+      when:
+        - enable_ssl_generation | default(false)
+        - ssl_cert_check is defined
+        - ssl_cert_check.stat.exists or (certbot_result is defined and certbot_result.rc == 0)
 
     - name: Test final Nginx configuration
       command: nginx -t
       register: nginx_final_test
       changed_when: false
+      when: enable_ssl_generation | default(false)
 
     - name: Reload Nginx with HTTPS configuration
       systemd:
         name: nginx
         state: reloaded
-      when: nginx_final_test.rc == 0
+      when:
+        - enable_ssl_generation | default(false)
+        - nginx_final_test is defined
+        - nginx_final_test.rc == 0
 
     - name: Setup certbot auto-renewal
       cron:
@@ -497,6 +511,7 @@
         hour: "3"
         job: "certbot renew --quiet --deploy-hook 'systemctl reload nginx'"
         user: root
+      when: enable_ssl_generation | default(false)
 
     # ==========================================
     # FINAL CHECKS
@@ -522,20 +537,20 @@
           - "=========================================="
           - "SaleTide Deployment Complete!"
           - "=========================================="
-          - "Backend API: https://{{ domain_name }}/api/"
-          - "Django Admin: https://{{ domain_name }}/admin/"
-          - "Frontend: https://{{ domain_name }}/"
+          - "Backend API: http://{{ domain_name }}/api/"
+          - "Django Admin: http://{{ domain_name }}/admin/"
+          - "Frontend: http://{{ domain_name }}/"
           - ""
           - "Superuser Email: {{ django_superuser_email }}"
           - "Superuser Password: {{ django_superuser_password }}"
           - ""
           - "Django Service: {{ django_status.status.ActiveState }}"
           - "Celery Worker: {{ celery_status.status.ActiveState }}"
-          - "SSL Certificate: {{ 'Installed' if ssl_final_check.stat.exists else 'Not Installed' }}"
+          - "SSL Certificate: {{ 'Installed' if ssl_final_check.stat.exists else 'Not Installed (HTTP only)' }}"
           - ""
           - "Next steps:"
           - "1. Ensure DNS is pointing {{ domain_name }} to {{ server_ip }}"
-          - "2. {% if ssl_final_check.stat.exists %}SSL is configured and auto-renewing{% else %}Re-run deployment after DNS propagation for SSL{% endif %}"
+          - "2. {% if ssl_final_check.stat.exists %}SSL is configured and auto-renewing{% else %}Add SSL certificate manually (see deployment/SSL_MANUAL.md){% endif %}"
           - "3. Configure email settings in {{ backend_dir }}/.env"
           - "4. Change default passwords immediately!"
           - "=========================================="
