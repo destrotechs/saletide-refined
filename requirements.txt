@@ -1,41 +1,51 @@
-# Django Core
-Django==4.2.16
-django-environ==0.11.2
-
-# Configuration Management
+amqp==5.3.1
+asgiref==3.9.2
+async-timeout==5.0.1
+attrs==25.3.0
+billiard==4.2.2
+celery==5.5.3
+charset-normalizer==3.4.4
+click==8.1.8
+click-didyoumean==0.3.1
+click-plugins==1.1.1.2
+click-repl==0.3.0
+Django==4.2.24
+django-cors-headers==4.9.0
+django-filter==25.1
+django-redis==6.0.0
+djangorestframework==3.16.1
+drf-spectacular==0.28.0
+inflection==0.5.1
+jsonschema==4.25.1
+jsonschema-specifications==2025.9.1
+kombu==5.5.4
+lxml==6.0.2
+packaging==25.0
+pillow==11.3.0
+prompt_toolkit==3.0.52
+psycopg2-binary==2.9.10
+PyJWT==2.10.1
+python-dateutil==2.9.0.post0
 python-decouple==3.8
+python-docx==1.2.0
+PyYAML==6.0.3
+redis==6.4.0
+referencing==0.36.2
+reportlab==4.2.5
+rpds-py==0.27.1
+six==1.17.0
+sqlparse==0.5.3
+typing_extensions==4.15.0
+tzdata==2025.2
+uritemplate==4.2.0
+vine==5.1.0
+wcwidth==0.2.14
 
-# Database
-psycopg2-binary==2.9.9
-
-# REST Framework
-djangorestframework==3.15.2
-django-cors-headers==4.4.0
-django-filter==24.3
-drf-spectacular==0.27.2
-
-# WSGI Server
+# Production Server
 gunicorn==23.0.0
 
-# Celery & Redis
-celery==5.4.0
-redis==5.0.8
-kombu==5.4.0
-vine==5.1.0
+# Time Zone Support
+pytz==2024.2
 
-# Date & Time Utilities
-python-dateutil==2.9.0.post0
-
-# Environment Variables
-python-dotenv==1.0.1
-
-# Security & Authentication
-PyJWT==2.9.0
-
-# Utilities
-pytz==2024.1
-pillow==10.4.0
-
-# Development (optional - comment out for production if not needed)
-# django-debug-toolbar==4.4.6
-# ipython==8.26.0
+# Environment Configuration
+django-environ==0.11.2
