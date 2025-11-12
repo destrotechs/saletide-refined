@@ -39,8 +39,8 @@ Starting with PostgreSQL 15, the default `public` schema permissions were change
 ```
 deployment/
 ├── deploy.yml                      # Main Ansible playbook
-├── inventory.ini                   # Server connection details
-├── vars.yml                        # Configuration variables
+├── inventory.ini.example           # Server connection details template (copy to inventory.ini)
+├── vars.yml.example                # Configuration variables template (copy to vars.yml)
 ├── README.md                       # This file (main deployment guide)
 ├── SSL_SETUP.md                    # SSL certificate setup guide
 ├── PYTHON_VENV.md                  # Python virtual environment guide
@@ -107,14 +107,51 @@ python manage.py migrate
 
 **📖 For detailed information about the virtual environment setup, troubleshooting, and best practices, see [PYTHON_VENV.md](PYTHON_VENV.md)**
 
+## Initial Configuration
+
+**⚠️ IMPORTANT**: Before running the deployment, you must create your configuration files from the provided examples.
+
+### 1. Create Server Inventory File
+
+Copy the example and add your server details:
+```bash
+cd deployment
+cp inventory.ini.example inventory.ini
+```
+
+Edit `inventory.ini` with your server information:
+```ini
+[saletide_server]
+saletide_prod ansible_host=YOUR_SERVER_IP ansible_user=root ansible_password=YOUR_SERVER_PASSWORD ansible_python_interpreter=/usr/bin/python3
+```
+
+**Security Note**: `inventory.ini` is ignored by git to protect your server credentials.
+
+### 2. Create Configuration Variables File
+
+Copy the example and configure your deployment:
+```bash
+cp vars.yml.example vars.yml
+```
+
+Edit `vars.yml` with your settings:
+```yaml
+server_ip: YOUR_SERVER_IP
+domain_name: your-domain.com
+db_password: "YOUR_SECURE_DB_PASSWORD"
+django_superuser_email: admin@example.com
+django_superuser_password: "YOUR_SECURE_ADMIN_PASSWORD"
+repo_url: https://github.com/yourusername/your-repo.git
+letsencrypt_email: admin@example.com
+```
+
+**Security Note**: `vars.yml` is ignored by git to protect your passwords and credentials.
+
 ## Quick Start
 
-### 1. Review Configuration
+### 1. Verify Configuration
 
-Check and update `vars.yml` if needed:
-- Domain name: `saletide.destrotechs.org`
-- Database credentials
-- Application settings
+After creating `inventory.ini` and `vars.yml` from the examples above, verify your settings are correct
 
 ### 2. Test Connection
 

@@ -68,3 +68,7 @@ logs/
 .coverage
 htmlcov/
 .pytest_cache/
+
+# Deployment - Sensitive Configuration
+deployment/inventory.ini
+deployment/vars.yml

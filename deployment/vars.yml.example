@@ -1,7 +1,7 @@
 ---
 # Server Configuration
-server_ip: 158.220.124.84
-domain_name: saletide.destrotechs.org
+server_ip: YOUR_SERVER_IP
+domain_name: your-domain.com
 
 # Application Configuration
 app_name: saletide
@@ -19,16 +19,16 @@ django_settings_module: timax_backend.settings
 # Database Configuration
 db_name: saletide_db
 db_user: saletide_user
-db_password: "SaleTide2024!Secure"
+db_password: "YOUR_SECURE_DB_PASSWORD"
 
 # Superuser Configuration
-django_superuser_email: morrisdestro@gmail.com
-django_superuser_password: "!Not123!"
-django_superuser_first_name: Morris
-django_superuser_last_name: Destro
+django_superuser_email: admin@example.com
+django_superuser_password: "YOUR_SECURE_ADMIN_PASSWORD"
+django_superuser_first_name: Admin
+django_superuser_last_name: User
 
 # GitHub Repository
-repo_url: https://github.com/destrotechs/saletide-refined.git
+repo_url: https://github.com/yourusername/your-repo.git
 repo_branch: main
 
 # Gunicorn Configuration
@@ -40,6 +40,6 @@ frontend_port: 3001
 frontend_api_url: https://{{ domain_name }}/api
 
 # SSL Configuration
-letsencrypt_email: morrisdestro@gmail.com
+letsencrypt_email: admin@example.com
 ssl_cert_path: /etc/letsencrypt/live/{{ domain_name }}/fullchain.pem
 ssl_key_path: /etc/letsencrypt/live/{{ domain_name }}/privkey.pem

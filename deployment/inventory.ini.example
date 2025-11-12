@@ -1,0 +1,2 @@
+[saletide_server]
+saletide_prod ansible_host=YOUR_SERVER_IP ansible_user=root ansible_password=YOUR_SERVER_PASSWORD ansible_python_interpreter=/usr/bin/python3
