@@ -192,50 +192,16 @@ The deployment will:
 15. ✅ Load initial data (chart of accounts, services)
 16. ✅ Setup and start systemd services (Django + Celery)
 17. ✅ Copy frontend files and create .env.local
-18. ⚠️ **Frontend npm install and build skipped** (handle manually)
-19. ✅ Configure PM2 for frontend
-20. ✅ Configure Nginx (HTTP first, then HTTPS)
-21. ✅ Generate Let's Encrypt SSL certificate automatically
-22. ✅ Setup automatic SSL certificate renewal
+18. ✅ Install frontend dependencies (npm install)
+19. ✅ Build Next.js application for production
+20. ✅ Configure and start PM2 for frontend
+21. ✅ Configure Nginx (HTTP first, then HTTPS)
+22. ✅ Generate Let's Encrypt SSL certificate automatically
+23. ✅ Setup automatic SSL certificate renewal
 
 ## Post-Deployment Steps
 
-### 1. Build Frontend (Manual Step Required)
-
-**⚠️ IMPORTANT**: The deployment skips npm install and build for the frontend. You must manually build the frontend on the server.
-
-SSH into your server and run:
-```bash
-# SSH to server
-ssh root@YOUR_SERVER_IP
-
-# Switch to application user
-su - saletide
-
-# Navigate to frontend directory
-cd /var/www/saletide/frontend
-
-# Install dependencies
-npm install
-
-# Build Next.js application
-npm run build
-
-# Exit back to root
-exit
-
-# Restart PM2 as application user
-su - saletide -c "pm2 restart saletide-frontend"
-```
-
-**Why manual build?**
-- Allows you to troubleshoot build issues separately
-- Gives you control over Node.js version and build environment
-- Prevents deployment from failing due to frontend build errors
-
-Once the frontend is built, PM2 will serve the production build.
-
-### 2. Configure DNS
+### 1. Configure DNS
 
 **IMPORTANT**: Before running deployment, ensure DNS is configured:
 
@@ -254,7 +220,7 @@ nslookup saletide.destrotechs.org
 dig saletide.destrotechs.org
 ```
 
-### 3. SSL Certificate (Automatic)
+### 2. SSL Certificate (Automatic)
 
 The deployment automatically:
 - ✅ Generates Let's Encrypt SSL certificate using certbot
@@ -282,7 +248,7 @@ sudo certbot renew --force-renewal
 sudo systemctl reload nginx
 ```
 
-### 4. Update Email Configuration
+### 3. Update Email Configuration
 
 Edit the environment file:
 ```bash
